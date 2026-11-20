@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Adrobot · Кампании</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <script type="module" src="/static/app.js"></script>
+</head>
+<body>
+  <header><div class="shell masthead"><div class="brand"><span class="mark" aria-hidden="true">A</span> Adrobot</div><span id="mode"></span></div></header>
+  <main class="shell">
+    <h1>Кампании</h1>
+    <nav aria-label="Разделы">
+      <button id="create-tab" aria-controls="create-panel" aria-pressed="true">Создание</button>
+      <button id="edit-tab" aria-controls="edit-panel" aria-pressed="false">Редактор</button>
+    </nav>
+    <section id="create-panel" class="columns">
+      <form id="create-form" class="card">
+        <h2>Новая кампания</h2>
+        <label>Название <input name="name" maxlength="150" required placeholder="Например, AU · November"></label>
+        <div class="duo">
+          <label>Код страны <input name="geo" maxlength="2" pattern="[A-Za-z]{2}" required placeholder="AU" autocapitalize="characters"></label>
+          <label>Оффер <input id="create-offer" required autocomplete="off" list="create-options" placeholder="Название или ID"><datalist id="create-options"></datalist></label>
+        </div>
+        <label>Домен <select name="domain_id" required></select></label>
+        <div class="duo">
+          <label>Группа <select name="group_id" required></select></label>
+          <label>Источник <select name="traffic_source_id" required></select></label>
+        </div>
+        <button class="primary" disabled>Создать кампанию</button>
+        <p class="status" id="create-status" role="status"></p>
+      </form>
+      <aside class="card routing">
+        <h2>Маршрутизация</h2>
+        <div class="route"><span>Гео совпадает</span><strong>Google</strong></div>
+        <div class="route"><span>Остальной трафик</span><strong>Поток офферов</strong></div>
+        <div id="created-link"></div>
+      </aside>
+    </section>
+    <section id="edit-panel" hidden>
+      <div class="card">
+        <h2>Выбор кампании</h2>
+        <div class="duo">
+          <label>Поиск <input id="campaign-search" placeholder="Название или ID"></label>
+          <label>Кампания <select id="campaign-list"><option value="">Выберите кампанию</option></select></label>
+        </div>
+        <p class="status" id="edit-status" role="status"></p>
+      </div>
+      <div id="flows"></div>
+    </section>
+  </main>
+</body>
+</html>
