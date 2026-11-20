@@ -77,6 +77,7 @@ async function loadCatalog() {
   try {
     const data = await api('catalog');
     $('#mode').textContent = data.mode === 'demo' ? 'Деморежим' : 'Keitaro подключён';
+    createForm.elements.name.placeholder = `${data.campaign_prefix}campaign1`;
     for (const [name, items] of Object.entries({
       domain_id: data.domains, group_id: data.groups, traffic_source_id: data.sources,
     })) {

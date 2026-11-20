@@ -19,9 +19,9 @@ def client(tmp_path):
         yield instance
 
 
-def create(client, geo="au"):
+def create(client, geo="au", name="Test AU"):
     return client.post("/api/campaigns", json={
-        "name": "Test AU", "geo": geo, "offer_id": 3749,
+        "name": name, "geo": geo, "offer_id": 3749,
         "group_id": 1, "domain_id": 1, "traffic_source_id": 1,
     })
 
@@ -32,6 +32,7 @@ def test_campaign_routes_and_catalog(client):
     response = create(client)
     assert response.status_code == 201
     campaign = response.json()
+    assert campaign["name"] == "test_galkin_Test AU"
     geo, fallback = campaign["streams"]
     assert campaign["state"] == "active"
     assert campaign["domain_id"] == campaign["traffic_source_id"] == 1
@@ -40,6 +41,11 @@ def test_campaign_routes_and_catalog(client):
     assert geo["destination"] == "https://google.com"
     assert fallback["type"] == "default"
     assert fallback["offers"] == [{"offer_id": 3749, "state": "active", "share": 100}]
+
+
+def test_campaign_prefix_is_not_duplicated(client):
+    assert create(client, name="test_galkin_campaign1").json()["name"] == "test_galkin_campaign1"
+    assert create(client, name="test_galkin_").status_code == 422
 
 
 def test_edit_persists_and_checks_version(client):

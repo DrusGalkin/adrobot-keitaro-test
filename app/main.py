@@ -161,7 +161,7 @@ def create_app(settings=None):
 
     @app.get("/api/catalog")
     def get_catalog(client=Depends(tracker)):
-        return {"mode": cfg.keitaro_mode, **catalog(client)}
+        return {"mode": cfg.keitaro_mode, "campaign_prefix": cfg.campaign_prefix, **catalog(client)}
 
     @app.get("/api/offers")
     def get_offers(q: str = Query("", max_length=150), client=Depends(tracker)):
@@ -195,6 +195,12 @@ def create_app(settings=None):
 
     @app.post("/api/campaigns", status_code=201)
     def create_campaign(data: CampaignInput, client=Depends(tracker), db: Session = Depends(database)):
+        prefix = cfg.campaign_prefix
+        name = data.name
+        if prefix and name[:len(prefix)].casefold() == prefix.casefold():
+            name = name[len(prefix):].strip()
+        if not name or len(prefix + name) > 150:
+            raise TrackerError("Введите название. Длина вместе с префиксом должна быть не более 150 символов.", 422)
         with mutation:
             offer = client.call("GET", f"offers/{data.offer_id}")
             if offer.get("state", "active") != "active":
@@ -206,7 +212,7 @@ def create_app(settings=None):
                     raise TrackerError("Выбранный домен, группа или источник недоступны.", 422)
             alias = uuid4().hex[:12]
             campaign = client.call("POST", "campaigns", json={
-                "name": data.name, "alias": alias, "type": "position", "state": "disabled",
+                "name": prefix + name, "alias": alias, "type": "position", "state": "disabled",
                 "domain_id": data.domain_id, "group_id": str(data.group_id),
                 "traffic_source_id": data.traffic_source_id,
             })

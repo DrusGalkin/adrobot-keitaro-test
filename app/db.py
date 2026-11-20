@@ -10,6 +10,7 @@ class Settings(BaseSettings):
     keitaro_mode: str = "demo"
     keitaro_url: str = ""
     keitaro_api_key: SecretStr = SecretStr("")
+    campaign_prefix: str = "test_galkin_"
 
 
 class Base(DeclarativeBase):
