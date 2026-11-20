@@ -40,4 +40,6 @@ td button{padding:4px 8px}
 .actions{flex-wrap:wrap}
 .search-row{display:flex;gap:10px;align-items:end}
 .search-row label{flex:1;margin:0}
+.checkbox{display:flex;align-items:center;gap:8px}
+.checkbox input{width:16px;height:16px;min-height:0;margin:0}
 @media(max-width:720px){.columns,.duo{grid-template-columns:1fr;gap:0}.shell{padding-inline:14px}.card{padding:16px}}

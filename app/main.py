@@ -27,6 +27,7 @@ class CampaignInput(BaseModel):
     domain_id: PositiveInt
     group_id: PositiveInt
     traffic_source_id: PositiveInt
+    activate: bool = True
 
     @field_validator("name", mode="before")
     @classmethod
@@ -43,7 +44,7 @@ class CampaignInput(BaseModel):
 
 
 class OfferEdit(BaseModel):
-    offer_ids: list[PositiveInt] = Field(min_length=1, max_length=100)
+    offer_ids: list[PositiveInt] = Field(max_length=100)
     version: str = Field(pattern=r"^[0-9a-f]{64}$")
 
     @field_validator("offer_ids")
@@ -229,7 +230,8 @@ def create_app(settings=None):
                     "schema": "landings", "action_type": "http", "landings": [],
                     "offers": rebalance([data.offer_id], []),
                 })
-                campaign = client.call("PUT", f"campaigns/{identifier}", json={"state": "active"})
+                if data.activate:
+                    campaign = client.call("PUT", f"campaigns/{identifier}", json={"state": "active"})
             except TrackerError as exc:
                 if cfg.keitaro_mode == "live":
                     raise TrackerError(f"Настройка кампании #{identifier} прервана. Проверьте её состояние в Keitaro. {exc}") from exc
@@ -258,12 +260,20 @@ def create_app(settings=None):
             current = offer_rows(stream)
             if [o["offer_id"] for o in current] == data.offer_ids:
                 return {"offers": current, "version": version(stream)}
+            if not data.offer_ids:
+                campaign = client.call("GET", f"campaigns/{campaign_id}")
+                if campaign.get("state") != "disabled":
+                    raise TrackerError("Выключите кампанию в Keitaro, чтобы удалить последний оффер.", 422)
             new_ids = set(data.offer_ids) - {o["offer_id"] for o in current}
             for identifier in new_ids:
                 if client.call("GET", f"offers/{identifier}").get("state", "active") != "active":
                     raise TrackerError("Можно добавить только активный оффер.", 422)
-            offers = rebalance(data.offer_ids, current)
+            offers = rebalance(data.offer_ids, current) if data.offer_ids else []
             updated = client.call("PUT", f"streams/{stream_id}", json={"offers": offers})
+            if offer_rows(updated) != offers:
+                updated = client.call("GET", f"streams/{stream_id}")
+            if offer_rows(updated) != offers:
+                raise TrackerError("Keitaro сохранил другой список офферов. Откройте кампанию заново.")
             db.add(Record(key=f"event:{uuid4().hex}", data={
                 "operation": "edit_offers", "mode": cfg.keitaro_mode, "campaign_id": campaign_id,
                 "stream_id": stream_id, "before": current, "after": offer_rows(updated),

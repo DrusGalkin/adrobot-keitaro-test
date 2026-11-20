@@ -114,6 +114,8 @@ createForm.addEventListener('submit', async event => {
   $('#created-link').replaceChildren();
   try {
     const body = Object.fromEntries(new FormData(createForm));
+    body.activate = !createForm.elements.keep_disabled.checked;
+    delete body.keep_disabled;
     body.offer_id = createOffer();
     const campaign = await api('campaigns', {method:'POST', body:JSON.stringify(body)});
     status(createStatus, `Кампания #${campaign.id} создана.`);
@@ -166,6 +168,11 @@ function editor(stream, campaign) {
   function render() {
     rows.replaceChildren();
     const active = draft.filter(o => o.state === 'active');
+    if (!draft.length) {
+      const cell = rows.insertRow().insertCell();
+      cell.colSpan = 3;
+      cell.textContent = 'В потоке пока нет офферов.';
+    }
     draft.forEach(offer => {
       const row = rows.insertRow();
       const i = active.indexOf(offer);
@@ -174,11 +181,12 @@ function editor(stream, campaign) {
       row.insertCell().textContent = `#${offer.offer_id}${name ? ' · ' + name : ''}${i < 0 ? ' · выключен' : ''}`;
       row.insertCell().textContent = `${share}%`;
       const remove = node('button', 'Удалить');
-      remove.disabled = busy || (i >= 0 && active.length === 1);
+      remove.disabled = busy || (i >= 0 && active.length === 1 &&
+        (campaign.state !== 'disabled' || draft.length > 1));
       remove.addEventListener('click', () => { draft = draft.filter(item => item !== offer); status(message); render(); });
       row.insertCell().append(remove);
     });
-    save.disabled = busy || !changed() || !active.length;
+    save.disabled = busy || !changed() || (!active.length && (draft.length > 0 || campaign.state !== 'disabled'));
     reset.disabled = busy || !changed();
     add.disabled = busy || draft.length >= 100;
   }
@@ -200,7 +208,7 @@ function editor(stream, campaign) {
     status(message, 'Сохраняем…');
     try {
       const body = JSON.stringify({offer_ids:draft.map(o => o.offer_id),version});
-      const data = await api(`campaigns/${campaign}/streams/${stream.id}/offers`, {method:'PUT',body});
+      const data = await api(`campaigns/${campaign.id}/streams/${stream.id}/offers`, {method:'PUT',body});
       version = data.version;
       for (const offer of baseline) if (offer.name) names.set(offer.offer_id, offer.name);
       baseline = data.offers;
@@ -223,7 +231,7 @@ async function openCampaign(identifier) {
     if (token !== selection) return;
     for (const stream of campaign.streams) {
       if (stream.editable) {
-        $('#flows').append(editor(stream, campaign.id));
+        $('#flows').append(editor(stream, campaign));
       } else {
         const card = node('section', '', 'card');
         card.append(node('h2', stream.name));

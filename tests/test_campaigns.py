@@ -19,10 +19,11 @@ def client(tmp_path):
         yield instance
 
 
-def create(client, geo="au", name="Test AU"):
+def create(client, geo="au", name="Test AU", activate=True):
     return client.post("/api/campaigns", json={
         "name": name, "geo": geo, "offer_id": 3749,
         "group_id": 1, "domain_id": 1, "traffic_source_id": 1,
+        "activate": activate,
     })
 
 
@@ -70,6 +71,19 @@ def test_disabled_offer_keeps_state():
     offers = rebalance([3, 2, 1], [{"offer_id": 2, "state": "disabled", "share": 12}])
     assert [offer["share"] for offer in offers] == [50, 0, 50]
     assert offers[1]["state"] == "disabled"
+
+
+def test_single_offer_can_be_detached_and_reattached_in_disabled_campaign(client):
+    campaign = create(client, activate=False).json()
+    flow = campaign["streams"][1]
+    path = f"/api/campaigns/{campaign['id']}/streams/{flow['id']}/offers"
+    assert campaign["state"] == "disabled"
+    removed = client.put(path, json={"offer_ids": [], "version": flow["version"]})
+    assert removed.status_code == 200
+    assert removed.json()["offers"] == []
+    added = client.put(path, json={"offer_ids": [3749], "version": removed.json()["version"]})
+    assert added.status_code == 200
+    assert added.json()["offers"] == [{"offer_id": 3749, "state": "active", "share": 100}]
 
 
 def test_live_adapter_writes_expected_payloads(tmp_path):
